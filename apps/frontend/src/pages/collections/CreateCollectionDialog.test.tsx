@@ -98,9 +98,21 @@ describe('<CreateCollectionDialog />', () => {
     await userEvent.click(screen.getByTestId('zv-create-submit'));
 
     expect(
-      await screen.findByText(/Name must match \^\[A-Za-z\]/),
+      await screen.findByText(/Name must match \^\[A-Za-z0-9_-\]/),
     ).toBeInTheDocument();
     expect(state.calls.some((c) => c.method === 'POST')).toBe(false);
+  });
+
+  it('accepts a valid hyphenated collection name', async () => {
+    const state: FakeState = { calls: [] };
+    const apiClient = makeApiClient(state);
+    renderWithProviders(<Harness />, { apiClient });
+
+    await userEvent.type(screen.getByTestId('zv-create-name'), 'my-valid-collection');
+    await userEvent.type(screen.getByTestId('zv-create-path'), '/tmp/foo');
+    await userEvent.click(screen.getByTestId('zv-create-submit'));
+
+    expect(screen.queryByText(/Name must match/)).not.toBeInTheDocument();
   });
 
   it('rejects an out-of-range dimension', async () => {
