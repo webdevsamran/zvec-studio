@@ -88,19 +88,29 @@ describe('<CreateCollectionDialog />', () => {
     expect(state.calls.some((c) => c.method === 'POST')).toBe(false);
   });
 
-  it('rejects an invalid name format', async () => {
-    const state: FakeState = { calls: [] };
+  it('surfaces backend validation error when collection name is rejected', async () => {
+    const state: FakeState = {
+      calls: [],
+      createError: {
+        code: 'INVALID_SCHEMA',
+        message: 'collection name is invalid',
+        messageKey: 'errors.code.INVALID_SCHEMA',
+        status: 400,
+        traceId: null,
+        severity: 'warning',
+      },
+    };
     const apiClient = makeApiClient(state);
     renderWithProviders(<Harness />, { apiClient });
 
-    await userEvent.type(screen.getByTestId('zv-create-name'), '1bad name');
+    await userEvent.type(screen.getByTestId('zv-create-name'), 'rejected-name');
     await userEvent.type(screen.getByTestId('zv-create-path'), '/tmp/foo');
     await userEvent.click(screen.getByTestId('zv-create-submit'));
 
     expect(
-      await screen.findByText(/Name must match \^\[A-Za-z0-9_-\]/),
-    ).toBeInTheDocument();
-    expect(state.calls.some((c) => c.method === 'POST')).toBe(false);
+      (await screen.findAllByText('collection name is invalid')).length,
+    ).toBeGreaterThan(0);
+    expect(state.calls.some((c) => c.method === 'POST')).toBe(true);
   });
 
   it('accepts a valid hyphenated collection name', async () => {
@@ -112,7 +122,13 @@ describe('<CreateCollectionDialog />', () => {
     await userEvent.type(screen.getByTestId('zv-create-path'), '/tmp/foo');
     await userEvent.click(screen.getByTestId('zv-create-submit'));
 
-    expect(screen.queryByText(/Name must match/)).not.toBeInTheDocument();
+    await waitFor(() => {
+      const postCall = state.calls.find((c) => c.method === 'POST');
+      expect(postCall).toBeDefined();
+      expect(
+        (postCall?.body as { schema?: { name?: string } })?.schema?.name,
+      ).toBe('my-valid-collection');
+    });
   });
 
   it('rejects an out-of-range dimension', async () => {

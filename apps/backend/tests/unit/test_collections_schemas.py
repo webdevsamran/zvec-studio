@@ -323,10 +323,17 @@ class TestCollectionSchema:
         schema = CollectionSchema.model_validate(payload)
         assert schema.fields == []
 
-    @pytest.mark.parametrize("bad_name", ["", "x", "ab", "a" * 65, "with space", "a@b"])
-    def test_collection_name_invalid_rejected(self, bad_name: str) -> None:
+    @pytest.mark.parametrize("empty_name", ["", "   "])
+    def test_collection_name_empty_rejected(self, empty_name: str) -> None:
         payload = _valid_schema_payload()
-        payload["name"] = bad_name
+        payload["name"] = empty_name
+        with pytest.raises(ValidationError):
+            CollectionSchema.model_validate(payload)
+
+    @pytest.mark.parametrize("reserved_name", ["recent", "open", "RECENT", "Open"])
+    def test_collection_name_reserved_rejected(self, reserved_name: str) -> None:
+        payload = _valid_schema_payload()
+        payload["name"] = reserved_name
         with pytest.raises(ValidationError):
             CollectionSchema.model_validate(payload)
 
