@@ -342,13 +342,14 @@ export function CreateCollectionDialog({
           title: t(err.error.messageKey, { defaultValue: err.error.code }),
           description: err.error.message,
         });
-        if (
-          err.error.code === 'VALIDATION_ERROR' ||
-          err.error.code === 'INVALID_SCHEMA'
-        ) {
+        const nameError =
+          err.error.fieldErrors?.['schema.name'] ??
+          err.error.fieldErrors?.['body.schema.name'] ??
+          err.error.fieldErrors?.['name'];
+        if (nameError) {
           setErrors((prev) => ({
             ...prev,
-            name: err.error.message,
+            name: nameError,
           }));
         }
       } else {

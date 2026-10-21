@@ -88,16 +88,19 @@ describe('<CreateCollectionDialog />', () => {
     expect(state.calls.some((c) => c.method === 'POST')).toBe(false);
   });
 
-  it('surfaces backend validation error when collection name is rejected', async () => {
+  it('surfaces backend validation error when collection name is rejected with field location', async () => {
     const state: FakeState = {
       calls: [],
       createError: {
-        code: 'INVALID_SCHEMA',
+        code: 'VALIDATION_ERROR',
         message: 'collection name is invalid',
-        messageKey: 'errors.code.INVALID_SCHEMA',
-        status: 400,
+        messageKey: 'errors.code.VALIDATION_ERROR',
+        status: 422,
         traceId: null,
         severity: 'warning',
+        fieldErrors: {
+          'schema.name': 'collection name is invalid',
+        },
       },
     };
     const apiClient = makeApiClient(state);
@@ -110,6 +113,32 @@ describe('<CreateCollectionDialog />', () => {
     expect(
       (await screen.findAllByText('collection name is invalid')).length,
     ).toBeGreaterThan(0);
+    expect(state.calls.some((c) => c.method === 'POST')).toBe(true);
+  });
+
+  it('keeps generic schema error at toast level without populating name field error', async () => {
+    const state: FakeState = {
+      calls: [],
+      createError: {
+        code: 'INVALID_SCHEMA',
+        message: 'invalid index configuration',
+        messageKey: 'errors.code.INVALID_SCHEMA',
+        status: 400,
+        traceId: null,
+        severity: 'warning',
+      },
+    };
+    const apiClient = makeApiClient(state);
+    renderWithProviders(<Harness />, { apiClient });
+
+    await userEvent.type(screen.getByTestId('zv-create-name'), 'my-collection');
+    await userEvent.type(screen.getByTestId('zv-create-path'), '/tmp/foo');
+    await userEvent.click(screen.getByTestId('zv-create-submit'));
+
+    expect(await screen.findByText('invalid index configuration')).toBeInTheDocument();
+    // Name input should NOT have errorText
+    const nameInput = screen.getByTestId('zv-create-name');
+    expect(nameInput).not.toHaveClass('zv-input--error');
     expect(state.calls.some((c) => c.method === 'POST')).toBe(true);
   });
 
