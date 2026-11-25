@@ -201,7 +201,7 @@ class TestImportCollection:
         assert resp.status_code == 409, resp.text
         assert resp.json()["code"] == "COLLECTION_ALREADY_EXISTS"
 
-    async def test_invalid_override_name_is_422(
+    async def test_invalid_override_name_is_400(
         self, client: AsyncClient, tmp_path: Path
     ) -> None:
         snapshot = await _make_snapshot(client, tmp_path)
@@ -211,7 +211,8 @@ class TestImportCollection:
             json=_restore_body(snapshot, tmp_path / "out", name="x"),  # too short
         )
 
-        assert resp.status_code == 422
+        assert resp.status_code == 400
+        assert resp.json()["code"] == "INVALID_SCHEMA"
 
     async def test_bad_row_rolls_back_whole_collection(
         self, client: AsyncClient, tmp_path: Path
